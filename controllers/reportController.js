@@ -2,7 +2,8 @@ const multer = require("multer");
 const xlsx = require("xlsx");
 const Report = require("../models/Report");
 const LaunchGame = require("../models/LaunchGame");
-
+const fs = require("fs");
+const path = require("path");
 // Configure Multer for File Upload
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -36,6 +37,16 @@ const uploadExcel = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
+
+    // Define storage path
+    const uploadDir = path.join(__dirname, "../uploads");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Save the file
+    const filePath = path.join(uploadDir, "latest_report.xlsx");
+    fs.writeFileSync(filePath, req.file.buffer);
 
     // Read the uploaded Excel file
     const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
@@ -141,5 +152,24 @@ const getOne = async (req, res) => {
   }
 };
 
+const downloadExcel = async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, "../uploads/latest_report.xlsx");
 
-module.exports = { upload, uploadExcel, getAllData, getOne };
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "No uploaded file available for download" });
+    }
+
+    res.setHeader("Content-Disposition", "attachment; filename=latest_report.xlsx");
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error("Error downloading Excel file:", error);
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+
+module.exports = { upload, uploadExcel, getAllData, getOne, downloadExcel };
