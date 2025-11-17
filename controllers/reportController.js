@@ -6,7 +6,23 @@ const fs = require("fs");
 const path = require("path");
 // Configure Multer for File Upload
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only Excel files
+    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.mimetype === 'application/vnd.ms-excel' ||
+        file.originalname.endsWith('.xlsx') ||
+        file.originalname.endsWith('.xls')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files (.xlsx, .xls) are allowed!'), false);
+    }
+  }
+});
 
 const parseExcelDate = (excelDate) => {
     if (!excelDate) return null;
@@ -117,7 +133,10 @@ const uploadExcel = async (req, res) => {
 
   } catch (error) {
     console.error("Error uploading Excel file:", error);
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ 
+      message: "Server error while uploading file. Please try again.",
+      error: error.message
+    });
   }
 };
 

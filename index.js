@@ -32,19 +32,38 @@ mongoose.connect(dbUri, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // CORS configuration
 const corsOptions = {
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // List of allowed origins
+        const allowedOrigins = [
+            'https://5oakgames.com',
+            'https://www.5oakgames.com',
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://localhost:3006'
+        ];
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            callback(null, true); // Allow all origins for now, but log it
+            console.warn(`CORS: Request from unlisted origin: ${origin}`);
+        }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: false, // Set to false when using multiple origins
     optionsSuccessStatus: 204,
 };
 
 
 // Middleware
 app.use(cors(corsOptions));
-// app.use(bodyParser.urlencoded({ limit: '10mb', extended: false }));
-// app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded());
-app.use(bodyParser.json());
+// Configure body parser with proper limits for file uploads
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(bodyParser.json({ limit: '50mb' }));
 
 // Middleware to handle method override
 app.use(methodOverride('_method'));
