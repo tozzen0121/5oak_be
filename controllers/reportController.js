@@ -90,9 +90,9 @@ const uploadExcel = async (req, res) => {
         return {
             summary: summaryDate,
             game: gameName,
-            betsEuro: safeNumberParse(row["bets_euro"]),
-            winsEuro: safeNumberParse(row["wins_euro"]),
-            ggrEuro: safeNumberParse(row["ggr_euro"]),
+            betsEuro: safeNumberParse(row.bets ?? row["bets_euro"]),
+            winsEuro: safeNumberParse(row.wins ?? row["wins_euro"]),
+            ggrEuro: safeNumberParse(row.ggr ?? row["ggr_euro"]),
             avgBet: safeNumberParse(row["avg_bet"]),
             spins: safeNumberParse(row.spins),
             uniquePlayers: safeNumberParse(row["unique_players"]),
@@ -122,7 +122,16 @@ const uploadExcel = async (req, res) => {
     const newGames = Array.from(uniqueGames).filter((game) => !existingGameNames.has(game));
 
     if (newGames.length > 0) {
-        const gameDocuments = newGames.map((game) => ({ name: game, launchDate: new Date() }));
+        const gameDocuments = newGames.map((game) => {
+            const gameRows = validReports.filter((report) => report.game === game);
+            const earliestSummary = gameRows.reduce((earliest, report) => {
+                return !earliest || report.summary < earliest ? report.summary : earliest;
+            }, null);
+            return {
+                name: game,
+                launchDate: earliestSummary || new Date(),
+            };
+        });
         await LaunchGame.insertMany(gameDocuments);
     }
 
