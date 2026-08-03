@@ -27,7 +27,11 @@ const app = express();
 // MongoDB connection
 const dbUri = process.env.MONGO_URI || 'mongodb://localhost:27017/5oka';
 mongoose.connect(dbUri, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('MongoDB connected'))
+    .then(async () => {
+        console.log('MongoDB connected');
+        const { migrateLegacyReportsTo5oak } = require('./scripts/migrateReportsTo5oak');
+        await migrateLegacyReportsTo5oak();
+    })
     .catch(err => console.log('MongoDB connection error:', err));
 
 // CORS configuration
@@ -80,8 +84,16 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/job', jobRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/applicant', applicantRoutes);
-app.use("/api/reports", reportRoutes);
-app.use('/api/launchGames', launchGameRoutes);
+
+const { tenantMiddleware, defaultTenantMiddleware } = require('./middlewares/tenantMiddleware');
+
+// Tenant-scoped report APIs
+app.use('/api/:tenant/reports', tenantMiddleware, reportRoutes);
+app.use('/api/:tenant/launchGames', tenantMiddleware, launchGameRoutes);
+
+// Legacy aliases → 5oak (cutover)
+app.use('/api/reports', defaultTenantMiddleware, reportRoutes);
+app.use('/api/launchGames', defaultTenantMiddleware, launchGameRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

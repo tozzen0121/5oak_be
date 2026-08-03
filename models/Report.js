@@ -35,6 +35,27 @@ const reportSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-const Report = mongoose.model("Report", reportSchema);
+const modelCache = {};
 
-module.exports = Report;
+const getReportModel = (tenant) => {
+  const key = String(tenant || '').toLowerCase();
+  const modelName = `Report_${key}`;
+  const collectionName = `reports_${key}`;
+
+  if (!modelCache[modelName]) {
+    modelCache[modelName] =
+      mongoose.models[modelName] ||
+      mongoose.model(modelName, reportSchema, collectionName);
+  }
+
+  return modelCache[modelName];
+};
+
+// Legacy default model (pre-tenant collection name "reports")
+const LegacyReport =
+  mongoose.models.Report || mongoose.model("Report", reportSchema, "reports");
+
+module.exports = getReportModel;
+module.exports.getReportModel = getReportModel;
+module.exports.LegacyReport = LegacyReport;
+module.exports.reportSchema = reportSchema;
