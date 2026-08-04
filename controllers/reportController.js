@@ -110,9 +110,14 @@ const uploadExcel = async (req, res) => {
     await Report.deleteMany({});
     await Report.insertMany(validReports);
 
+    const excelGameNames = Array.from(uniqueGames);
+
+    // Keep Launch Games in sync with the Excel: drop games no longer in the file
+    await LaunchGame.deleteMany({ name: { $nin: excelGameNames } });
+
     const existingGames = await LaunchGame.find({}, { name: 1 });
     const existingGameNames = new Set(existingGames.map((game) => game.name));
-    const newGames = Array.from(uniqueGames).filter((game) => !existingGameNames.has(game));
+    const newGames = excelGameNames.filter((game) => !existingGameNames.has(game));
 
     if (newGames.length > 0) {
       const gameDocuments = newGames.map((game) => {
